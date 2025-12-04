@@ -3,12 +3,13 @@ import cors from "cors";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import path from "path";
-import { ConfigManager } from "#server/components/config/ConfigManager";
+import { DatabaseConfigManager } from "#server/components/config/DatabaseConfigManager";
 import { PriceData } from "#server/components/PriceData";
 import { Router } from "#server/components/Router";
 import { UnifiedExecutor } from "#server/components/UnifiedExecutor";
 import configRouter from "#server/routes/config/configRoutes";
 import V1Router from "#server/routes/v1/v1";
+import logger  from '#types/logger'
 
 async function main() {
   // --- 1. Argument Parsing ---
@@ -19,25 +20,13 @@ async function main() {
       description: "Path to the configuration LowDB JSON database file",
       required: true,
     })
-    .option("loglevel", {
-      alias: "l",
-      type: "string",
-      description: "Logging level (info, debug, warn, error)",
-      default: "info",
-    })
     .parse();
 
   // --- 2. Initialize Singletons in Order ---
-  await ConfigManager.initialize({
-    databasePath: argv.configDatabase as string,
-  });
+  await DatabaseConfigManager.initialize(
+    argv.configDatabase,
+  );
 
-  // Apply log level from config if available, otherwise use CLI argument
-  try {
-    const config = ConfigManager.getInstance().getConfig();
-    const configLogLevel = config.logLevel;
-    const finalLogLevel = configLogLevel || argv.loglevel;
-  } catch (error) {}
   PriceData.initialize();
   Router.initialize();
 

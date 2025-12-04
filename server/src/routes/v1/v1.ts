@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ConfigManager } from "#server/components/config/ConfigManager";
+import { DatabaseConfigManager } from "#server/components/config/DatabaseConfigManager";
 import { getErrorMessage } from "#server/components/Utils";
 
 
@@ -15,7 +15,7 @@ const V1Router = Router();
 
   V1Router.get("/v1/models", (_req, res) => {
     try {
-      const providers = ConfigManager.getInstance().getProviders();
+      const providers = DatabaseConfigManager.getInstance().getProviders();
       const allModels = new Set<string>();
 
       for (const provider of providers) {

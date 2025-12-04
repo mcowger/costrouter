@@ -1,6 +1,6 @@
 import type { Provider } from "#types/provider";
 import type { Model } from "#types/model";
-import { ConfigManager } from "#server/components/config/ConfigManager";
+import { DatabaseConfigManager } from "#server/components/config/DatabaseConfigManager";
 import { Request, Response, NextFunction } from "express";
 import { PriceData } from "#server/components/PriceData";
 
@@ -34,7 +34,7 @@ export class Router {
 
 
   private getProvidersForModel(modelname: string): { provider: Provider; model: Model }[] | undefined {
-    const providers: Provider[] = ConfigManager.getInstance().getProviders();
+    const providers: Provider[] = DatabaseConfigManager.getInstance().getProviders();
     const matches: { provider: Provider; model: Model }[] = [];
 
     for (const provider of providers) {

@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { ConfigManager } from "#server/components/config/ConfigManager";
+import { DatabaseConfigManager } from "#server/components/config/DatabaseConfigManager";
 import { getErrorMessage } from "#server/components/Utils";
 
 const configRouter = Router();
 
 configRouter.get("/config/get", (_req, res) => {
   try {
-    const config = ConfigManager.getInstance().getConfig();
+    const config = DatabaseConfigManager.getInstance().getConfig();
     res.json(config);
   } catch (error) {
     const message = getErrorMessage(error);
@@ -17,7 +17,7 @@ configRouter.get("/config/get", (_req, res) => {
 configRouter.post("/config/set", async (req, res) => {
   try {
     const newConfig = req.body;
-    await ConfigManager.getInstance().updateConfig(newConfig);
+    await DatabaseConfigManager.getInstance().updateConfig(newConfig);
     res.json({ message: "Configuration updated successfully." });
   } catch (error) {
     const message = getErrorMessage(error);
@@ -27,7 +27,7 @@ configRouter.post("/config/set", async (req, res) => {
 
 configRouter.post("/admin/reload", async (_req, res) => {
   try {
-    await ConfigManager.getInstance().reloadConfig();
+    await DatabaseConfigManager.getInstance().reloadConfig();
     res.json({ message: "Configuration reloaded successfully." });
   } catch (error) {
     const message = getErrorMessage(error);

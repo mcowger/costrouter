@@ -3,38 +3,55 @@ import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import type { AppConfig } from '#types/appConfig';
 import type { Provider } from '#types/provider';
-import { IConfigManager } from '#server/components/config/IConfigManager';
+import logger from '#types/logger';
+
+export interface IConfigManager {
+  events: EventEmitter;
+  getConfig(): AppConfig;
+  getProviders(): Provider[];
+  updateConfig(newConfig: AppConfig): Promise<void>;
+  reloadConfig(): Promise<void>;
+}
 
 /**
  * Manages application configuration using a LowDB JSON file.
  */
-export class DatabaseConfigManager implements IConfigManager {
+export class DatabaseConfigManager {
+  private static instance: DatabaseConfigManager | null = null;
   public events = new EventEmitter();
   private db: Low<AppConfig>;
   private config: AppConfig;
 
   private constructor(dbPath: string) {
+    logger.info(`Loading DB from: ${dbPath}`);
     const adapter = new JSONFile<AppConfig>(dbPath);
-    // Set default data if the file doesn't exist or is empty
     this.db = new Low(adapter, { providers: []});
     this.config = { providers: []};
   }
 
   public static async initialize(databasePath: string): Promise<DatabaseConfigManager> {
-    const instance = new DatabaseConfigManager(databasePath);
+    if (DatabaseConfigManager.instance) {
+      throw new Error('DatabaseConfigManager is already initialized');
+    }
 
+    const instance = new DatabaseConfigManager(databasePath);
     await instance.db.read();
 
-    // If the database file is new, it will be null, so we should write the default.
     if (instance.db.data === null) {
       instance.db.data = { providers: []};
       await instance.db.write();
     }
 
-
-    // Validate the loaded configuration
     instance.config = instance.db.data;
+    DatabaseConfigManager.instance = instance;
     return instance;
+  }
+
+  public static getInstance(): DatabaseConfigManager {
+    if (!DatabaseConfigManager.instance) {
+      throw new Error('DatabaseConfigManager has not been initialized. Call initialize() first.');
+    }
+    return DatabaseConfigManager.instance;
   }
 
   public getConfig(): AppConfig {
@@ -46,26 +63,17 @@ export class DatabaseConfigManager implements IConfigManager {
   }
 
   public async updateConfig(newConfig: AppConfig): Promise<void> {
-    // Validate the new configuration before updating
-    const validatedConfig = newConfig;
-
-    this.config = validatedConfig;
-    Object.assign(this.db.data, validatedConfig);
+    this.config = newConfig;
+    Object.assign(this.db.data, newConfig);
     await this.db.write();
-
+    logger.debug(`Updated DB`);
     this.events.emit('configUpdated', this.config);
   }
 
   public async reloadConfig(): Promise<void> {
-    
-    // Re-read the configuration from disk
     await this.db.read();
-    
-
-    // Validate and update the config
     this.config = this.db.data;
-    
-    // Emit the configUpdated event so other components can react
+    logger.debug(`Reloaded DB`);
     this.events.emit('configUpdated', this.config);
   }
 }
