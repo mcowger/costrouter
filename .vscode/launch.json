@@ -11,45 +11,11 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "outputCapture": "std",
-      "runtimeExecutable": "npx",
+      "runtimeExecutable": "npm",
       "runtimeArgs": [
-        "npm",
         "run",
-        "dev:server"
+        "dev"
       ]
     },
-    {
-      "name": "Frontend",
-      "request": "launch",
-      "type": "node",
-      "skipFiles": [
-        "<node_internal>/**"
-      ],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "outputCapture": "std",
-      "showAsyncStacks": true,
-      "runtimeExecutable": "npx",
-      "runtimeArgs": [
-        "npm",
-        "run",
-        "dev:ui"
-      ]
-    }
-  ],
-  "compounds": [
-    {
-      "name": "All",
-      "configurations": [
-        "Backend",
-        "Frontend"
-      ],
-      "stopAll": true,
-      "presentation": {
-        "hidden": false,
-        "group": "",
-        "order": 1
-      }
-    }
   ]
 }

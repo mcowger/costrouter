@@ -29,7 +29,7 @@ export class UnifiedExecutor {
   // Map of provider types to their factory functions
   // Adding new providers is as simple as adding a new entry here!
 
-  private static readonly PROVIDER_FACTORIES = new Map<string, (config: Provider) => any>([
+  private static readonly PROVIDER_FACTORIES = new Map<string, (config: any) => any>([
     // Core AI SDK providers
     ["openai", (config: OpenAIProviderSettings) => createOpenAI({
       apiKey: config.apiKey,
@@ -64,7 +64,7 @@ export class UnifiedExecutor {
 
   public static getInstance(): UnifiedExecutor {
     if (!UnifiedExecutor.instance) {
-      throw new Error('UnifiedExecutor has not been initialized. Call initialize() first.');
+      UnifiedExecutor.initialize()
     }
     return UnifiedExecutor.instance;
   }
@@ -87,7 +87,7 @@ export class UnifiedExecutor {
   /**
    * Creates an AI SDK provider instance based on the provider configuration.
    */
-  private async createProviderInstance(config: Provider): Promise<any> {
+  private createProviderInstance(config: Provider): Promise<any> {
     const factory = UnifiedExecutor.PROVIDER_FACTORIES.get(config.type);
 
     if (!factory) {
@@ -98,7 +98,7 @@ export class UnifiedExecutor {
     }
 
     // The factory can be async now (e.g., for Copilot)
-    return await factory(config);
+    return factory(config);
   }
 
   /**
@@ -129,7 +129,7 @@ export class UnifiedExecutor {
       const providerInstance = await this.getOrCreateProvider(chosenProvider);
 
       // Create the model using the provider
-      const model = providerInstance(chosenModel.canonical_slug);
+      const model = providerInstance(chosenModel.exposed_slug);
 
       // Extract request data
       const { messages, stream = false, n = 1 } = req.body;
@@ -158,39 +158,6 @@ export class UnifiedExecutor {
     }
   }
 
-  /**
-   * Calculates the cost of a request based on model pricing and usage.
-   * Uses PriceData override logic: model.pricing if available, otherwise PriceData lookup.
-   * Handles both old and new usage formats.
-   * @returns The calculated cost in USD, or undefined if pricing data is not available
-   */
-  private calculateCost(provider: Provider, model: Model, usage: any): number | undefined {
-    if (!usage) {
-      return undefined;
-    }
-
-    // Get pricing using override logic: model.pricing first, then PriceData lookup
-    try {
-      const priceData = PriceData.getInstance();
-      const pricing = priceData.getPriceWithOverride(provider.type, model);
-
-      if (!pricing) {
-        return undefined;
-      }
-
-      // Handle both v1 and v2 usage formats
-      const inputTokens = usage.promptTokens ?? usage.inputTokens ?? 0;
-      const outputTokens = usage.completionTokens ?? usage.outputTokens ?? 0;
-
-      const inputCost = (inputTokens / 1_000_000) * (pricing.inputCostPerMillionTokens ?? 0);
-      const outputCost = (outputTokens / 1_000_000) * (pricing.outputCostPerMillionTokens ?? 0);
-
-      const totalCost = inputCost + outputCost;
-      return totalCost;
-    } catch (error) {
-      return undefined;
-    }
-  }
 
   /**
    * Handles streaming responses and usage tracking.
@@ -212,7 +179,7 @@ export class UnifiedExecutor {
 
     const streamId = `chatcmpl-${Date.now()}`;
     const created = Math.floor(Date.now() / 1000);
-    const modelName = model.exposed_slug || model.canonical_slug;
+    const modelName = model.exposed_slug
 
     // Send initial chunk with role
     const initialChunk: ChatCompletionChunk = {
@@ -267,22 +234,6 @@ export class UnifiedExecutor {
       res.write('data: [DONE]\n\n');
       res.end();
 
-      // Handle usage tracking
-      result.usage
-        .then((usage: any) => {
-          const cost = this.calculateCost(provider, model, usage);
-          // Convert usage format for UsageManager compatibility
-          const usageForManager = {
-            promptTokens: usage.promptTokens ?? usage.inputTokens ?? 0,
-            completionTokens: usage.completionTokens ?? usage.outputTokens ?? 0,
-          };
-          // Use the real model name for usage tracking
-          // Use 0 as fallback if cost is undefined (pricing data not available)
-
-        })
-        .catch((error: any) => {
-        });
-
     } catch (error) {
       res.write(`data: {"error": "Streaming failed"}\n\n`);
       res.write('data: [DONE]\n\n');
@@ -300,12 +251,7 @@ export class UnifiedExecutor {
     model: Model,
     result: GenerateTextResult<any, any>,
   ): void {
-    const cost = this.calculateCost(provider, model, result.usage);
-    // Convert usage format for UsageManager compatibility
-    const usageForManager = {
-      promptTokens: (result.usage as any).promptTokens ?? (result.usage as any).inputTokens ?? 0,
-      completionTokens: (result.usage as any).completionTokens ?? (result.usage as any).outputTokens ?? 0,
-    };
+
     // Use the real model name for usage tracking
     // Use 0 as fallback if cost is undefined (pricing data not available)
 
@@ -315,7 +261,7 @@ export class UnifiedExecutor {
       id: `chatcmpl-${Date.now()}`,
       object: "chat.completion",
       created: Math.floor(Date.now() / 1000),
-      model: model.exposed_slug || model.canonical_slug, // Use the mapped name that the client requested
+      model: model.exposed_slug, // Use the mapped name that the client requested
       choices: [{
         index: 0,
         message: {
@@ -326,11 +272,6 @@ export class UnifiedExecutor {
         finish_reason: result.finishReason as ChatCompletion.Choice['finish_reason'],
         logprobs: null
       }],
-      usage: {
-        prompt_tokens: usageForManager.promptTokens,
-        completion_tokens: usageForManager.completionTokens,
-        total_tokens: usageForManager.promptTokens + usageForManager.completionTokens
-      }
     };
 
     res.json(openAIResponse);
@@ -346,22 +287,6 @@ export class UnifiedExecutor {
     model: Model,
     results: GenerateTextResult<any, any>[],
   ): void {
-    // Calculate total cost and usage across all results
-    let totalCost = 0;
-    let totalPromptTokens = 0;
-    let totalCompletionTokens = 0;
-
-    // Process each result for usage tracking
-    results.forEach((result) => {
-      const cost = this.calculateCost(provider, model, result.usage) ?? 0;
-      totalCost += cost;
-
-      const promptTokens = (result.usage as any).promptTokens ?? (result.usage as any).inputTokens ?? 0;
-      const completionTokens = (result.usage as any).completionTokens ?? (result.usage as any).outputTokens ?? 0;
-
-      totalPromptTokens += promptTokens;
-      totalCompletionTokens += completionTokens;
-    });
   
 
     // Format response to match OpenAI API format with multiple choices
@@ -369,7 +294,7 @@ export class UnifiedExecutor {
       id: `chatcmpl-${Date.now()}`,
       object: "chat.completion",
       created: Math.floor(Date.now() / 1000),
-      model: model.exposed_slug || model.canonical_slug,
+      model: model.exposed_slug,
       choices: results.map((result, index) => ({
         index,
         message: {
@@ -379,12 +304,7 @@ export class UnifiedExecutor {
         },
         finish_reason: result.finishReason as ChatCompletion.Choice['finish_reason'],
         logprobs: null
-      })),
-      usage: {
-        prompt_tokens: totalPromptTokens,
-        completion_tokens: totalCompletionTokens,
-        total_tokens: totalPromptTokens + totalCompletionTokens
-      }
+      }))
     };
 
     res.json(openAIResponse);

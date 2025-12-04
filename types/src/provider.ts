@@ -18,5 +18,7 @@ export type Provider = {
   /** Base URL (required for openai-compatible, custom, and legacy openai types) */
   baseURL?: string;
 
+  headers?: Record<string,string>[]
+
 };
 

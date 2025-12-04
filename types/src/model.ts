@@ -5,11 +5,9 @@ import type { Pricing } from '#types/pricing';
  */
 export type Model = {
   /**
-   * Optional mapped name for the model that clients will use in requests.
-   * If not provided, the 'name' field will be used for both provider calls and client requests.
-   * Example: name="google/gemini-2.5-flash", mappedName="gemini-2.5-flash"
+
    */
-  exposed_slug?: string;
+  exposed_slug: string;
 
     /**
    The pretty name we show: "Gemini 2.5 Flash"

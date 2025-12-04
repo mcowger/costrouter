@@ -10,6 +10,7 @@ import { UnifiedExecutor } from "#server/components/UnifiedExecutor";
 import configRouter from "#server/routes/config/configRoutes";
 import V1Router from "#server/routes/v1/v1";
 import logger  from '#types/logger'
+import { pino } from "pino";
 
 async function main() {
   // --- 1. Argument Parsing ---
@@ -32,6 +33,7 @@ async function main() {
   const executor = UnifiedExecutor.initialize();
 
   const app = express();
+  //app.use(pino)
   // Enable JSON body parsing for incoming requests with increased size limit
   app.use(express.json({ limit: "5mb" }));
   app.use(cors());
