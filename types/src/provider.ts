@@ -1,4 +1,6 @@
 
+import type { Model } from '#types/model';
+
 
 /**
  * Supported AI SDK v5 provider types
@@ -12,7 +14,7 @@ export type ProviderType =
   // OpenAI-compatible and custom providers
   | "openai-compatible";
 
-import type { Model } from './model.js';
+
 
 /**
  * Type definition for a single LLM provider configuration.

@@ -1,5 +1,5 @@
-import { IConfigManager } from './IConfigManager.js';
-import { DatabaseConfigManager } from './DatabaseConfigManager.js';
+import { IConfigManager } from '#server/components/config/IConfigManager';
+import { DatabaseConfigManager } from '#server/components/config/DatabaseConfigManager';
 import type { AppConfig } from '#types/appConfig';
 import type { Provider } from '#types/provider';
 import EventEmitter from 'events';

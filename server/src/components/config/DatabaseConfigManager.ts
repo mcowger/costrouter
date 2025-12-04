@@ -3,7 +3,7 @@ import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import type { AppConfig } from '#types/appConfig';
 import type { Provider } from '#types/provider';
-import { IConfigManager } from './IConfigManager.js';
+import { IConfigManager } from '#server/components/config/IConfigManager';
 
 /**
  * Manages application configuration using a LowDB JSON file.

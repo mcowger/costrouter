@@ -1,4 +1,4 @@
-import type { Pricing } from './pricing.js';
+import type { Pricing } from '#types/pricing';
 
 /**
  * Type definition for a single model configuration, including optional pricing.

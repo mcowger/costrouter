@@ -1,8 +1,8 @@
 import type { Provider } from "#types/provider";
 import type { Model } from "#types/model";
-import { ConfigManager } from "./config/ConfigManager.js";
+import { ConfigManager } from "#server/components/config/ConfigManager";
 import { Request, Response, NextFunction } from "express";
-import { PriceData } from "./PriceData.js";
+import { PriceData } from "#server/components/PriceData";
 
 export class Router {
   private static instance: Router;

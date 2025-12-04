@@ -3,11 +3,11 @@ import cors from "cors";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import path from 'path';
-import { ConfigManager } from "./components/config/ConfigManager.js";
-import { PriceData } from "./components/PriceData.js";
-import { Router } from "./components/Router.js";
-import { UnifiedExecutor } from "./components/UnifiedExecutor.js";
-import { getErrorMessage } from "./components/Utils.js";
+import { ConfigManager } from "#server/components/config/ConfigManager";
+import { PriceData } from "#server/components/PriceData";
+import { Router } from "#server/components/Router";
+import { UnifiedExecutor } from "#server/components/UnifiedExecutor";
+import { getErrorMessage } from "#server/components/Utils";
 
 
 async function main() {

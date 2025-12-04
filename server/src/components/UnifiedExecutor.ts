@@ -1,6 +1,6 @@
 import { Provider } from "#types/provider";
 import { Model } from "#types/model";
-import { PriceData } from "./PriceData.js";
+import { PriceData } from "#server/components/PriceData";
 import { Request, Response } from "express";
 import {
   GenerateTextResult,

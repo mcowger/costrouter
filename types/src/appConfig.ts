@@ -1,4 +1,4 @@
-import type { Provider } from './provider.js';
+import type { Provider } from '#types/provider';
 
 /**
  * Type definition for the main application configuration file (`config.json`).
