@@ -1,10 +1,4 @@
 
-import type { Model } from '#types/model';
-
-
-
-
-
 /**
  * Type definition for a single LLM provider configuration.
  * Supports all AI SDK v4 providers with provider-specific validation.
@@ -14,6 +8,7 @@ export type Provider = {
   id: string;
 
   /** The type of provider */
+  /** Must be one of the supported providers fromthe UnifiedExecutor */
   type: string;
 
   // Common authentication fields
@@ -23,7 +18,5 @@ export type Provider = {
   /** Base URL (required for openai-compatible, custom, and legacy openai types) */
   baseURL?: string;
 
-  // Supported models as proper Model objects
-  models: Model[]
 };
 

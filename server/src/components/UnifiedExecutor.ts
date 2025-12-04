@@ -52,9 +52,13 @@ export class UnifiedExecutor {
   private constructor() {
   }
 
-  public static initialize(): void {
+  public static initialize(): UnifiedExecutor {
     if (!UnifiedExecutor.instance) {
       UnifiedExecutor.instance = new UnifiedExecutor();
+      return UnifiedExecutor.instance
+    }
+    else {
+      return UnifiedExecutor.instance
     }
   }
 

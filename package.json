@@ -5,17 +5,22 @@
   "description": "An intelligent gateway for routing requests to LLM providers.",
   "main": "dist/server/index.js",
   "type": "module",
-  "imports": {
-    "#types/*": "./dist/types/*.js",
-    "#server/*": "./dist/server/*.js"
+"imports": {
+    "#types/*": {
+      "development": "./types/src/*.ts",
+      "default": "./dist/types/*.js"
+    },
+    "#server/*": {
+      "development": "./server/src/*.ts",
+      "default": "./dist/server/*.js"
+    }
   },
   "scripts": {
     "clean": "rm -rf dist node_modules",
     "build": "tsc --build",
     "build:types": "tsc --build types",
     "build:server": "tsc --build server",
-    "dev": "concurrently \"npm:dev:server\"",
-    "dev:server": "nodemon --exec node --loader ts-node/esm server/src/index.ts"
+    "dev": "FORCE_COLOR=true NODE_ENV=development tsx watch server/src/index.ts --cd config/config.jsonc"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.53",

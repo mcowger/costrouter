@@ -4,8 +4,6 @@ import type { Pricing } from '#types/pricing';
  * Type definition for a single model configuration, including optional pricing.
  */
 export type Model = {
-  /** The name of the model as used by the provider.  This is what will be sent in the LLM completion call*/
-  canonical_slug: string;
   /**
    * Optional mapped name for the model that clients will use in requests.
    * If not provided, the 'name' field will be used for both provider calls and client requests.
@@ -23,4 +21,10 @@ export type Model = {
 
   /** Override pricing info for this specific model. */
   pricing?: Pricing;
+
+  /** provider IDs where this model can be used */
+  providers: {
+    providerId: string;
+    provider_model_slug: string;
+  }[];
 };

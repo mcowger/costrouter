@@ -1,53 +1,44 @@
 import type { Provider } from "#types/provider";
 import type { Model } from "#types/model";
-import { DatabaseConfigManager } from "#server/components/config/DatabaseConfigManager";
+import { JSONConfigManager } from "#server/components/config/DatabaseConfigManager";
 import { Request, Response, NextFunction } from "express";
 import { PriceData } from "#server/components/PriceData";
 
-export class Router {
-  private static instance: Router;
+export class ProviderRouter {
+  private static instance: ProviderRouter;
 
   // Private constructor - no longer needs UsageManager
-  private constructor() {
-  }
+  private constructor() {}
 
   /**
    * Initializes the singleton Router.
    */
-  public static initialize(): void {
-    if (Router.instance) {
-      return;
+  public static initialize(): ProviderRouter {
+    if (ProviderRouter.instance) {
+      return ProviderRouter.instance;
+    } else {
+      ProviderRouter.instance = new ProviderRouter();
+      return ProviderRouter.instance;
     }
-    Router.instance = new Router();
   }
 
   /**
    * Returns the singleton instance of the Router.
    * Throws an error if it hasn't been initialized.
    */
-  public static getInstance(): Router {
-    if (!Router.instance) {
+  public static getInstance(): ProviderRouter {
+    if (!ProviderRouter.instance) {
       throw new Error("Router must be initialized before use.");
     }
-    return Router.instance;
+    return ProviderRouter.instance;
   }
 
-
-  private getProvidersForModel(modelname: string): { provider: Provider; model: Model }[] | undefined {
-    const providers: Provider[] = DatabaseConfigManager.getInstance().getProviders();
+  private getProvidersForModel(modelname: string): Provider[] {
+    const providers: Provider[] =
+      JSONConfigManager.getInstance().getProviders();
     const matches: { provider: Provider; model: Model }[] = [];
 
-    for (const provider of providers) {
-      for (const model of provider.models) {
-        // Check if the requested model name matches either the mappedName or the real name
-        const modelIdentifier = model.exposed_slug || model.canonical_slug;
-        if (modelIdentifier === modelname) {
-          matches.push({ provider, model });
-        }
-      }
-    }
-
-    return matches.length > 0 ? matches : undefined;
+    return [];
   }
 
   /**
@@ -77,8 +68,10 @@ export class Router {
       }
 
       // All defined pricing fields must be exactly 0
-      const inputIsZero = !hasInputCost || pricing.inputCostPerMillionTokens === 0;
-      const outputIsZero = !hasOutputCost || pricing.outputCostPerMillionTokens === 0;
+      const inputIsZero =
+        !hasInputCost || pricing.inputCostPerMillionTokens === 0;
+      const outputIsZero =
+        !hasOutputCost || pricing.outputCostPerMillionTokens === 0;
 
       return inputIsZero && outputIsZero;
     } catch (error) {
@@ -100,8 +93,14 @@ export class Router {
     const priceData = PriceData.getInstance();
 
     return candidates.sort((a, b) => {
-      const pricingA = priceData.getPriceWithOverride(a.provider as any, a.model);
-      const pricingB = priceData.getPriceWithOverride(b.provider as any, b.model);
+      const pricingA = priceData.getPriceWithOverride(
+        a.provider as any,
+        a.model,
+      );
+      const pricingB = priceData.getPriceWithOverride(
+        b.provider as any,
+        b.model,
+      );
 
       const inputCostA = pricingA?.inputCostPerMillionTokens ?? Infinity;
       const inputCostB = pricingB?.inputCostPerMillionTokens ?? Infinity;
@@ -127,7 +126,7 @@ export class Router {
    * Filters candidates - now returns all candidates since rate limiting is removed.
    */
   private async filterAvailableCandidates(
-    candidates: { provider: Provider; model: Model }[]
+    candidates: { provider: Provider; model: Model }[],
   ): Promise<{ provider: Provider; model: Model }[]> {
     // Rate limiting has been removed, so all candidates are available
     return candidates;
@@ -137,8 +136,11 @@ export class Router {
    * Partitions candidates into zero-cost and paid providers.
    */
   private partitionCandidatesByCost(
-    candidates: { provider: Provider; model: Model }[]
-  ): { zeroCost: { provider: Provider; model: Model }[]; paid: { provider: Provider; model: Model }[] } {
+    candidates: { provider: Provider; model: Model }[],
+  ): {
+    zeroCost: { provider: Provider; model: Model }[];
+    paid: { provider: Provider; model: Model }[];
+  } {
     const zeroCost: { provider: Provider; model: Model }[] = [];
     const paid: { provider: Provider; model: Model }[] = [];
 
@@ -158,15 +160,13 @@ export class Router {
    */
   private selectBestCandidate(
     zeroCostCandidates: { provider: Provider; model: Model }[],
-    paidCandidates: { provider: Provider; model: Model }[]
+    paidCandidates: { provider: Provider; model: Model }[],
   ): { provider: Provider; model: Model } | undefined {
     if (zeroCostCandidates.length > 0) {
-
       return this.randomSelect(zeroCostCandidates);
     }
 
     if (paidCandidates.length > 0) {
-
       return this.selectBestPaidProvider(paidCandidates);
     }
 
@@ -184,52 +184,14 @@ export class Router {
     return items[randomIndex];
   }
 
-  public async getBestProviderForModel(
-    modelName: string,
-  ): Promise<{ provider: Provider; model: Model } | { error: string; status: number }> {
-
-
+  public async getBestProviderForModel(modelName: string): Promise<Provider> {
     const candidates = this.getProvidersForModel(modelName);
-    if (!candidates || candidates.length === 0) {
-      return {
-        error: `No configured provider found for model: ${modelName}`,
-        status: 404,
-      };
-    }
-
-
-    const availableCandidates = await this.filterAvailableCandidates(candidates);
-    if (availableCandidates.length === 0) {
-
-      return {
-        error: `No available providers found for model '${modelName}'.`,
-        status: 503,
-      };
-    }
-
-    const { zeroCost, paid } = this.partitionCandidatesByCost(availableCandidates);
-    const selectedCandidate = this.selectBestCandidate(zeroCost, paid);
-
-    if (!selectedCandidate) {
-
-      return { error: "Failed to select a suitable provider.", status: 500 };
-    }
-
-    const { provider, model } = selectedCandidate;
-
-    return { provider, model };
+    return candidates[0];
   }
 
-  public async chooseProvider(req: Request, res: Response, next: NextFunction) {
+  public async chooseProvider(req: Request, res: Response) {
     const modelName = req.body.model;
     const result = await this.getBestProviderForModel(modelName);
-
-    if ("error" in result) {
-      return res.status(result.status).json({ error: result.error });
-    }
-
-    res.locals.chosenProvider = result.provider;
-    res.locals.chosenModel = result.model;
-    return next();
+    return result;
   }
 }

@@ -5,19 +5,11 @@ import type { AppConfig } from '#types/appConfig';
 import type { Provider } from '#types/provider';
 import logger from '#types/logger';
 
-export interface IConfigManager {
-  events: EventEmitter;
-  getConfig(): AppConfig;
-  getProviders(): Provider[];
-  updateConfig(newConfig: AppConfig): Promise<void>;
-  reloadConfig(): Promise<void>;
-}
-
 /**
  * Manages application configuration using a LowDB JSON file.
  */
-export class DatabaseConfigManager {
-  private static instance: DatabaseConfigManager | null = null;
+export class JSONConfigManager {
+  private static instance: JSONConfigManager | null = null;
   public events = new EventEmitter();
   private db: Low<AppConfig>;
   private config: AppConfig;
@@ -25,33 +17,35 @@ export class DatabaseConfigManager {
   private constructor(dbPath: string) {
     logger.info(`Loading DB from: ${dbPath}`);
     const adapter = new JSONFile<AppConfig>(dbPath);
-    this.db = new Low(adapter, { providers: []});
-    this.config = { providers: []};
+    this.db = new Low(adapter,  { providers: [], models: []});
+    this.config = { providers: [], models: []};
   }
 
-  public static async initialize(databasePath: string): Promise<DatabaseConfigManager> {
-    if (DatabaseConfigManager.instance) {
+  public static async initialize(databasePath: string): Promise<JSONConfigManager> {
+    if (JSONConfigManager.instance) {
       throw new Error('DatabaseConfigManager is already initialized');
     }
 
-    const instance = new DatabaseConfigManager(databasePath);
+    const instance = new JSONConfigManager(databasePath);
     await instance.db.read();
 
     if (instance.db.data === null) {
-      instance.db.data = { providers: []};
+      instance.db.data =  { providers: [], models: []};
       await instance.db.write();
     }
 
     instance.config = instance.db.data;
-    DatabaseConfigManager.instance = instance;
+    logger.info(`Loaded ${instance.config.providers.length} Providers`)
+    logger.info(`Loaded ${instance.config.models.length} Models`)
+    JSONConfigManager.instance = instance;
     return instance;
   }
 
-  public static getInstance(): DatabaseConfigManager {
-    if (!DatabaseConfigManager.instance) {
+  public static getInstance(): JSONConfigManager {
+    if (!JSONConfigManager.instance) {
       throw new Error('DatabaseConfigManager has not been initialized. Call initialize() first.');
     }
-    return DatabaseConfigManager.instance;
+    return JSONConfigManager.instance;
   }
 
   public getConfig(): AppConfig {

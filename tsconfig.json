@@ -11,7 +11,8 @@
     "outDir": "dist",
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "#types/*": ["./types/src/*"]
+      "#types/*": ["./types/src/*"],
+      "#server/*": ["./server/src/*"] 
     }
   },
   "ts-node": {

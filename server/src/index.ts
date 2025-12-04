@@ -3,9 +3,9 @@ import cors from "cors";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import path from "path";
-import { DatabaseConfigManager } from "#server/components/config/DatabaseConfigManager";
+import { JSONConfigManager } from "#server/components/config/DatabaseConfigManager";
 import { PriceData } from "#server/components/PriceData";
-import { Router } from "#server/components/Router";
+import { ProviderRouter } from "#server/components/Router";
 import { UnifiedExecutor } from "#server/components/UnifiedExecutor";
 import configRouter from "#server/routes/config/configRoutes";
 import V1Router from "#server/routes/v1/v1";
@@ -23,19 +23,14 @@ async function main() {
     .parse();
 
   // --- 2. Initialize Singletons in Order ---
-  await DatabaseConfigManager.initialize(
+  await JSONConfigManager.initialize(
     argv.configDatabase,
   );
 
   PriceData.initialize();
-  Router.initialize();
+  const providerRouter = ProviderRouter.initialize();
+  const executor = UnifiedExecutor.initialize();
 
-  // --- 3. Get Instances ---
-  const router = Router.getInstance();
-  const executor = UnifiedExecutor.getInstance();
-
-  // --- 3. Express Server Setup ---
-  // Initialize Express application
   const app = express();
   // Enable JSON body parsing for incoming requests with increased size limit
   app.use(express.json({ limit: "5mb" }));
@@ -80,7 +75,7 @@ async function main() {
 
   const PORT = process.env.PORT || 3000;
   const server = app.listen(PORT, () => {});
-
+  logger.info(`Listening on 0.0.0.0:${PORT}`)
   // --- Graceful Shutdown ---
   const gracefulShutdown = async (_signal: string) => {
     server.close(async () => {

@@ -1,4 +1,5 @@
 import type { Provider } from '#types/provider';
+import type { Model } from '#types/model';
 
 /**
  * Type definition for the main application configuration file (`config.json`).
@@ -8,9 +9,6 @@ export type AppConfig = {
   /** A list of all configured LLM providers. */
   providers: Provider[];
 
-  /** 
-   * The logging level for the application.
-   * Controls the verbosity of server logs.
-   */
-  logLevel?: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+  /** All the models specified */
+  models: Model[]
 };
