@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "../../dist", // Keep compiled output separate
+    "rootDir": "src/"
+  },
+  "include": [
+    "**/*.ts"
+  ]
+}

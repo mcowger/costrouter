@@ -5,10 +5,5 @@ dist/
 scripts/*
 config/*.jsonc
 npm-debug.log*
-config.json
-config.jsonc
-copilot.data
-usage.db.json
 .DS_Store
 coverage/
-.aider*
