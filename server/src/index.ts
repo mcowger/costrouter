@@ -6,7 +6,6 @@ import path from 'path';
 import { ConfigManager } from "./components/config/ConfigManager.js";
 import { PriceData } from "./components/PriceData.js";
 import { Router } from "./components/Router.js";
-import { logger, responseBodyLogger, requestResponseLogger, PinoLogger } from "./components/Logger.js";
 import { UnifiedExecutor } from "./components/UnifiedExecutor.js";
 import { getErrorMessage } from "./components/Utils.js";
 
@@ -28,8 +27,6 @@ async function main() {
     })
     .parse();
 
-  // Set initial log level from CLI argument
-  logger.level = argv.loglevel;
 
   // --- 2. Initialize Singletons in Order ---
   await ConfigManager.initialize({ databasePath: argv.configDatabase as string });
@@ -39,11 +36,7 @@ async function main() {
     const config = ConfigManager.getInstance().getConfig();
     const configLogLevel = config.logLevel;
     const finalLogLevel = configLogLevel || argv.loglevel;
-    PinoLogger.setLogLevel(finalLogLevel);
-    logger.info(`Log level set to: ${finalLogLevel}${configLogLevel ? ' (from config)' : ' (from CLI)'}`);
   } catch (error) {
-    logger.warn(`Failed to apply config log level, using CLI argument: ${argv.loglevel}`);
-    PinoLogger.setLogLevel(argv.loglevel);
   }
   PriceData.initialize();
   Router.initialize();
@@ -60,10 +53,10 @@ async function main() {
   app.use(express.json({ limit: '5mb' }));
   app.use(cors());
 
-  // Apply response body logging middleware
-  app.use(responseBodyLogger);
-  // Apply request and response logging middleware
-  app.use(requestResponseLogger);
+  // // Apply response body logging middleware
+  // app.use(responseBodyLogger);
+  // // Apply request and response logging middleware
+  // app.use(requestResponseLogger);
 
   // --- 4. Health Check Endpoint ---
   app.get("/health", (_req, res) => {
@@ -105,7 +98,6 @@ async function main() {
       });
     } catch (error) {
       const message = getErrorMessage(error);
-      logger.error(`Failed to get models: ${message}`);
       res.status(500).json({ error: "Failed to retrieve models." });
     }
   });
@@ -117,7 +109,6 @@ async function main() {
       res.json(config);
     } catch (error) {
       const message = getErrorMessage(error);
-      logger.error(`Failed to get config: ${message}`);
       res.status(500).json({ error: "Failed to retrieve config." });
     }
   });
@@ -129,93 +120,31 @@ async function main() {
       res.json({ message: "Configuration updated successfully." });
     } catch (error) {
       const message = getErrorMessage(error);
-      logger.error(`Failed to set config: ${message}`);
       res.status(500).json({ error: "Failed to update configuration." });
     }
   });
 
   app.post("/admin/reload", async (_req, res) => {
     try {
-      logger.info("Configuration reload requested via API endpoint");
 
       // Reload the configuration from disk
       await ConfigManager.getInstance().reloadConfig();
-      logger.info("Configuration reloaded from disk");
 
       // Rate limiting has been disabled, so no limiter updates are needed
 
       res.json({ message: "Configuration reloaded successfully." });
     } catch (error) {
       const message = getErrorMessage(error);
-      logger.error(`Failed to reload configuration: ${message}`);
       res.status(500).json({ error: "Failed to reload configuration." });
     }
   });
 
-  // --- 7. Logging Admin API Routes ---
-  app.get("/admin/logging/level", (_req, res) => {
-    try {
-      const currentLevel = PinoLogger.getCurrentLogLevel();
-      res.json({ level: currentLevel });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      logger.error(`Failed to get current log level: ${message}`);
-      res.status(500).json({ error: "Failed to retrieve current log level." });
-    }
-  });
-
-  app.post("/admin/logging/level", (req, res) => {
-    try {
-      const { level } = req.body;
-      if (!level || typeof level !== 'string') {
-        return res.status(400).json({ error: "Log level is required and must be a string." });
-      }
-
-      PinoLogger.setLogLevel(level);
-      logger.info(`Log level changed to: ${level}`);
-
-      res.json({
-        message: `Log level successfully changed to ${level}`,
-        level: level
-      });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      logger.error(`Failed to set log level: ${message}`);
-      res.status(400).json({ error: message });
-    }
-  });
 
 
 
 
-  // --- 9.5. Logging Admin API Routes ---
-  app.get("/admin/logging/level", (_req, res) => {
-    try {
-      const currentLevel = PinoLogger.getCurrentLogLevel();
-      res.json({ level: currentLevel });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      logger.error(`Failed to get log level: ${message}`);
-      res.status(500).json({ error: "Failed to retrieve log level." });
-    }
-  });
 
-  app.post("/admin/logging/level", (req, res) => {
-    try {
-      const { level } = req.body;
-      if (!level || typeof level !== 'string') {
-        return res.status(400).json({ error: "Log level is required and must be a string." });
-      }
 
-      PinoLogger.setLogLevel(level);
-      logger.info(`Log level changed to: ${level}`);
-      res.json({ message: `Log level successfully changed to ${level}`, level });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      logger.error(`Failed to set log level: ${message}`);
-      res.status(400).json({ error: message });
-    }
-  });
 
 
   // --- Static UI Serving (after API routes) ---
@@ -242,14 +171,11 @@ async function main() {
 
   const PORT = process.env.PORT || 3000;
   const server = app.listen(PORT, () => {
-    logger.info(`LLM Gateway listening on port ${PORT}`);
   });
 
   // --- Graceful Shutdown ---
   const gracefulShutdown = async (signal: string) => {
-    logger.info(`Received ${signal}. Shutting down gracefully...`);
     server.close(async () => {
-      logger.info("HTTP server closed.");
       process.exit(0);
     });
   };

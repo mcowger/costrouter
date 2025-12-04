@@ -12,6 +12,8 @@ export type ProviderType =
   // OpenAI-compatible and custom providers
   | "openai-compatible";
 
+import type { Model } from './model.js';
+
 /**
  * Type definition for a single LLM provider configuration.
  * Supports all AI SDK v4 providers with provider-specific validation.
@@ -30,8 +32,7 @@ export type Provider = {
   /** Base URL (required for openai-compatible, custom, and legacy openai types) */
   baseURL?: string;
 
-  // Supported models.  We look up based on 
-  // Record<exposed_slug,canonical_slug>
-  models: Record<string,string>[]
+  // Supported models as proper Model objects
+  models: Model[]
 };
 

@@ -1,12 +1,12 @@
 {
+  "extends": "../tsconfig.json",
   "compilerOptions": {
     "composite": true,
-    "declaration": true,
-    "declarationMap": true,
-    "outDir": "../../dist", // Keep compiled output separate
-    "rootDir": "src/"
+    "outDir": "../dist/types",
+    "rootDir": "src",
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "tsBuildInfoFile": "../dist/types.tsbuildinfo"
   },
-  "include": [
-    "**/*.ts"
-  ]
+  "include": ["src/**/*"]
 }

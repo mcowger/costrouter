@@ -1,10 +1,9 @@
 import EventEmitter from 'events';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
-import type { AppConfig } from '@types/appConfig';
-import type { Provider } from '#schemas/src/provider';
+import type { AppConfig } from '#types/appConfig';
+import type { Provider } from '#types/provider';
 import { IConfigManager } from './IConfigManager.js';
-import { logger } from '../Logger.js';
 
 /**
  * Manages application configuration using a LowDB JSON file.
@@ -22,7 +21,6 @@ export class DatabaseConfigManager implements IConfigManager {
   }
 
   public static async initialize(databasePath: string): Promise<DatabaseConfigManager> {
-    logger.info(`Initializing config database at ${databasePath}...`);
     const instance = new DatabaseConfigManager(databasePath);
 
     await instance.db.read();
@@ -36,8 +34,6 @@ export class DatabaseConfigManager implements IConfigManager {
 
     // Validate the loaded configuration
     instance.config = instance.db.data;
-
-    logger.info("Config database initialized.");
     return instance;
   }
 
@@ -58,11 +54,9 @@ export class DatabaseConfigManager implements IConfigManager {
     await this.db.write();
 
     this.events.emit('configUpdated', this.config);
-    logger.info("Configuration has been updated and saved to the database.");
   }
 
   public async reloadConfig(): Promise<void> {
-    logger.info("Reloading configuration from database...");
     
     // Re-read the configuration from disk
     await this.db.read();
@@ -73,6 +67,5 @@ export class DatabaseConfigManager implements IConfigManager {
     
     // Emit the configUpdated event so other components can react
     this.events.emit('configUpdated', this.config);
-    logger.info("Configuration reloaded successfully from database.");
   }
 }

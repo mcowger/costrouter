@@ -1,6 +1,5 @@
-import { Pricing } from '#schemas/src/pricing';
-import { Model } from '#schemas/src/model';
-import { logger } from './Logger.js';
+import type { Pricing } from '#types/pricing';
+import type { Model } from '#types/model';
 
 /**
  * Singleton component for serving LLM pricing data.
@@ -20,13 +19,11 @@ export class PriceData {
    */
   public static initialize(): void {
     if (PriceData.instance) {
-      logger.warn("PriceData has already been initialized.");
       return;
     }
 
     PriceData.instance = new PriceData();
     PriceData.instance.isInitialized = true;
-    logger.info("PriceData initialized successfully (using config-only pricing).");
   }
 
   /**
@@ -49,11 +46,9 @@ export class PriceData {
    */
   public getPriceWithOverride(providerType: string, model: Model): Pricing | undefined {
     if (model.pricing) {
-      logger.debug(`Using explicit pricing for '${providerType}' @ '${model.canonical_slug}'`);
       return model.pricing;
     }
 
-    logger.debug(`No explicit pricing for '${providerType}' @ '${model.canonical_slug}' in config.`);
     return undefined;
   }
 

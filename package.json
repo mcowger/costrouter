@@ -6,14 +6,25 @@
   "main": "dist/server/index.js",
   "type": "module",
   "imports": {
-    "#schemas/*": "./dist/schemas/*.js"
+    "#types/*": "./dist/types/*.js"
   },
   "scripts": {
     "clean": "rm -rf dist node_modules",
+    "build": "tsc --build",
+    "build:types": "tsc --build types",
+    "build:server": "tsc --build server",
     "dev": "concurrently \"npm:dev:server\"",
-    "dev:server": "nodemon"
+    "dev:server": "nodemon --exec node --loader ts-node/esm server/src/index.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.53",
+    "@ai-sdk/deepinfra": "^1.0.29",
+    "@ai-sdk/fireworks": "^1.0.29",
+    "@ai-sdk/google": "^2.0.44",
+    "@ai-sdk/openai": "^2.0.77",
+    "@ai-sdk/togetherai": "^1.0.29",
+    "@ai-sdk/xai": "^2.0.39",
+    "@openrouter/ai-sdk-provider": "^1.4.0",
     "ai": "^5.0.106",
     "cors": "^2.8.5",
     "express": "^5.2.1",

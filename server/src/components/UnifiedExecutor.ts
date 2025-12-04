@@ -1,8 +1,6 @@
-import { Provider } from "#schemas/src/provider";
-import { Model } from "#schemas/src/model";
-import { UsageManager } from "./UsageManager.js";
+import { Provider } from "#types/provider";
+import { Model } from "#types/model";
 import { PriceData } from "./PriceData.js";
-import { logger } from "./Logger.js";
 import { Request, Response } from "express";
 import {
   GenerateTextResult,
@@ -14,27 +12,11 @@ import { getErrorMessage } from "./Utils.js";
 // Import OpenAI types for proper response formatting
 import type { ChatCompletion, ChatCompletionChunk } from "openai/resources";
 // Import AI SDK providers
-import { createOpenAI, OpenAIProviderSettings } from "@ai-sdk/openai";
-import { AnthropicProviderSettings, createAnthropic } from "@ai-sdk/anthropic";
-import { createGoogleGenerativeAI, GoogleGenerativeAIProviderSettings } from "@ai-sdk/google";
-import { createVertex, GoogleVertexProviderSettings } from "@ai-sdk/google-vertex";
-//import { createAzure } from "@ai-sdk/azure"; // Commented out until wI figure out the resourceName
-//import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock"; // Commented out until we verify API
-import { createGroq, GroqProviderSettings } from "@ai-sdk/groq";
-import { createMistral, MistralProviderSettings } from "@ai-sdk/mistral";
-import { createDeepSeek, DeepSeekProviderSettings } from "@ai-sdk/deepseek";
-import { createXai, XaiProviderSettings } from "@ai-sdk/xai";
-import { createPerplexity, PerplexityProviderSettings } from "@ai-sdk/perplexity";
-import { createTogetherAI, TogetherAIProviderSettings } from "@ai-sdk/togetherai";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { CopilotTokenManager } from "./config/CopilotTokenManager.js";
-
-// import { createOpenRouter } from '@openrouter/ai-sdk-provider'; Only supports v5,
-// which nothing else does.  For now, treat it as openai-compatible
-import { createOllama, OllamaProviderSettings } from "ollama-ai-provider";
-import { createQwen, QwenProviderSettings } from "qwen-ai-provider";
-import { createGeminiProvider } from "ai-sdk-provider-gemini-cli"
-import { createClaudeCode } from "ai-sdk-provider-claude-code"
+import { createOpenRouter, OpenRouterProviderSettings } from '@openrouter/ai-sdk-provider';
+import {createOpenAI, OpenAIProviderSettings} from '@ai-sdk/openai'
+import {createAnthropic, AnthropicProviderSettings} from '@ai-sdk/anthropic'
+import {createGoogleGenerativeAI, GoogleGenerativeAIProviderSettings} from '@ai-sdk/google'
+import {createDeepInfra, DeepInfraProviderSettings} from '@ai-sdk/deepinfra'
 
 /**
  * Unified executor that handles all AI SDK v5 providers.
@@ -42,7 +24,6 @@ import { createClaudeCode } from "ai-sdk-provider-claude-code"
  */
 export class UnifiedExecutor {
   private static instance: UnifiedExecutor;
-  private usageManager: UsageManager;
   private providerInstances: Map<string, any> = new Map();
 
   // Map of provider types to their factory functions
@@ -60,79 +41,17 @@ export class UnifiedExecutor {
     ["google", (config: GoogleGenerativeAIProviderSettings) => createGoogleGenerativeAI({
       apiKey: config.apiKey,
     })],
-    ["google-vertex", (config: GoogleVertexProviderSettings) => createVertex({
-      googleAuthOptions: config.googleAuthOptions
-    })],
-    ["groq", (config: GroqProviderSettings) => createGroq({
-      apiKey: config.apiKey
-    })],
-    ["mistral", (config: MistralProviderSettings) => createMistral({
-      apiKey: config.apiKey
-    })],
-    ["deepseek", (config: DeepSeekProviderSettings) => createDeepSeek({
-      apiKey: config.apiKey
-    })],
-    ["xai", (config: XaiProviderSettings) => createXai({
-      apiKey: config.apiKey
-    })],
-    ["perplexity", (config: PerplexityProviderSettings) => createPerplexity({
-      apiKey: config.apiKey
-    })],
-    ["togetherai", (config: TogetherAIProviderSettings) => createTogetherAI({
-      apiKey: config.apiKey
-    })],
-
-    ["qwen", (config: QwenProviderSettings) => createQwen({
-      apiKey: config.apiKey!,
-    })],
-    ["ollama", (config: OllamaProviderSettings) => createOllama({
-      baseURL: config.baseURL || "http://localhost:11434",
-    })],
-    ["gemini-cli", (_config: any) => createGeminiProvider({
-      authType: "oauth-personal"
-    })],
-    ["claude-code", (_config: any) => createClaudeCode({
-    })],
-    // OpenRouter - use compatible for now because their provider only supports v5.
-    ["openrouter", (config) => createOpenAICompatible({
-      name: config.id,
-      apiKey: config.apiKey!,
-      baseURL: config.baseURL || "https://api.openrouter.ai/api/v1",
-    })],
-
-    // OpenAI-compatible providers
-    ["openai-compatible", (config) => createOpenAICompatible({
-      name: config.id,
-      baseURL: config.baseURL!,
-      apiKey: config.apiKey!,
-    })],
-    ["custom", (config) => createOpenAICompatible({ // Legacy support
-      name: config.id,
-      baseURL: config.baseURL!,
-      apiKey: config.apiKey!,
-    })],
-    ["copilot", async (config) => createOpenAICompatible({
-      name: config.id,
-      apiKey: await CopilotTokenManager.getBearerToken(config),
-      baseURL: config.baseURL || "https://api.githubcopilot.com/",
-      headers: {
-        accept: "application/json",
-        "editor-version": "vscode/1.85.1",
-        "Copilot-Integration-Id": "vscode-chat",
-        "content-type": "application/json",
-        "user-agent": "GithubCopilot/1.155.0",
-        "accept-encoding": "gzip,deflate,br",
-      },
+    ["openrouter", (config: OpenRouterProviderSettings) => createOpenRouter({
+      apiKey: config.apiKey,
     })],
   ]);
 
-  private constructor(usageManager: UsageManager) {
-    this.usageManager = usageManager;
+  private constructor() {
   }
 
-  public static initialize(usageManager: UsageManager): void {
+  public static initialize(): void {
     if (!UnifiedExecutor.instance) {
-      UnifiedExecutor.instance = new UnifiedExecutor(usageManager);
+      UnifiedExecutor.instance = new UnifiedExecutor();
     }
   }
 
@@ -182,7 +101,6 @@ export class UnifiedExecutor {
     const cacheKey = `${config.type}-${config.id}`;
 
     if (!this.providerInstances.has(cacheKey)) {
-      logger.debug(`Creating new provider instance for ${config.type}:${config.id}`);
       const instance = await this.createProviderInstance(config);
       this.providerInstances.set(cacheKey, instance);
     }
@@ -197,10 +115,7 @@ export class UnifiedExecutor {
     const chosenProvider = res.locals.chosenProvider as Provider;
     const chosenModel = res.locals.chosenModel as Model;
 
-    logger.debug(
-      { provider: chosenProvider, model: chosenModel },
-      `Executing request with ${chosenProvider.type} provider`
-    );
+
 
     try {
       // Get or create the AI SDK provider instance
@@ -215,9 +130,7 @@ export class UnifiedExecutor {
       // Execute the request using AI SDK
       if (stream) {
         // Note: Streaming doesn't support multiple choices (n > 1) in OpenAI API
-        if (n > 1) {
-          logger.warn(`Streaming requests don't support n > 1. Using n = 1 instead of ${n}`);
-        }
+
         const result = streamText({ model: model as any, messages });
         this.handleStreamingResponse(res, chosenProvider, chosenModel, result);
       } else {
@@ -233,9 +146,7 @@ export class UnifiedExecutor {
         }
       }
     } catch (error) {
-      logger.error(
-        `AI request failed for provider ${chosenProvider.id}: ${getErrorMessage(error)}`
-      );
+
       res.status(500).json({ error: "AI request failed" });
     }
   }
@@ -248,7 +159,6 @@ export class UnifiedExecutor {
    */
   private calculateCost(provider: Provider, model: Model, usage: any): number | undefined {
     if (!usage) {
-      logger.debug(`No usage data for model '${model.canonical_slug}'. Cannot calculate cost.`);
       return undefined;
     }
 
@@ -258,13 +168,7 @@ export class UnifiedExecutor {
       const pricing = priceData.getPriceWithOverride(provider.type, model);
 
       if (!pricing) {
-        logger.debug(`No pricing data available for model '${model.canonical_slug}' in provider '${provider.type}'. Cannot calculate cost.`);
         return undefined;
-      }
-
-      // If a flat request cost is defined, it overrides token-based pricing.
-      if (pricing.costPerRequest) {
-        return pricing.costPerRequest;
       }
 
       // Handle both v1 and v2 usage formats
@@ -275,10 +179,8 @@ export class UnifiedExecutor {
       const outputCost = (outputTokens / 1_000_000) * (pricing.outputCostPerMillionTokens ?? 0);
 
       const totalCost = inputCost + outputCost;
-      logger.debug(`Calculated cost for model '${model.canonical_slug}': $${totalCost.toFixed(6)}`);
       return totalCost;
     } catch (error) {
-      logger.debug(`Error calculating cost for model '${model.canonical_slug}': ${getErrorMessage(error)}. Using fallback.`);
       return undefined;
     }
   }
@@ -369,14 +271,12 @@ export class UnifiedExecutor {
           };
           // Use the real model name for usage tracking
           // Use 0 as fallback if cost is undefined (pricing data not available)
-          this.usageManager.consume(provider.id, model.canonical_slug, usageForManager, cost ?? 0);
+
         })
         .catch((error: any) => {
-          logger.error(`Failed to consume usage for streaming request: ${getErrorMessage(error)}`);
         });
 
     } catch (error) {
-      logger.error(`Streaming error: ${getErrorMessage(error)}`);
       res.write(`data: {"error": "Streaming failed"}\n\n`);
       res.write('data: [DONE]\n\n');
       res.end();
@@ -401,7 +301,7 @@ export class UnifiedExecutor {
     };
     // Use the real model name for usage tracking
     // Use 0 as fallback if cost is undefined (pricing data not available)
-    this.usageManager.consume(provider.id, model.canonical_slug, usageForManager, cost ?? 0);
+
 
     // Format response to match OpenAI API format using official types
     const openAIResponse: ChatCompletion = {
@@ -455,13 +355,7 @@ export class UnifiedExecutor {
       totalPromptTokens += promptTokens;
       totalCompletionTokens += completionTokens;
     });
-
-    // Track usage with combined totals
-    const usageForManager = {
-      promptTokens: totalPromptTokens,
-      completionTokens: totalCompletionTokens,
-    };
-    this.usageManager.consume(provider.id, model.canonical_slug, usageForManager, totalCost);
+  
 
     // Format response to match OpenAI API format with multiple choices
     const openAIResponse: ChatCompletion = {
@@ -495,6 +389,5 @@ export class UnifiedExecutor {
    */
   public clearCache(): void {
     this.providerInstances.clear();
-    logger.debug("Provider instance cache cleared");
   }
 }

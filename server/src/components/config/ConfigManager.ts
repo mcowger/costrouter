@@ -1,7 +1,7 @@
 import { IConfigManager } from './IConfigManager.js';
 import { DatabaseConfigManager } from './DatabaseConfigManager.js';
-import type { AppConfig } from '#schemas/src/appConfig';
-import type { Provider } from '#schemas/src/provider';
+import type { AppConfig } from '#types/appConfig';
+import type { Provider } from '#types/provider';
 import EventEmitter from 'events';
 
 type InitializeParams = {

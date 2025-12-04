@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
-import { AppConfig } from '#schemas/src/appConfig';
-import { Provider } from '#schemas/src/provider';
+import type { AppConfig } from '#types/appConfig';
+import type { Provider } from '#types/provider';
 
 export interface IConfigManager {
   events: EventEmitter;

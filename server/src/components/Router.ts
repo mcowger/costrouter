@@ -1,7 +1,6 @@
-import { Provider } from "#schemas/src/provider";
-import { Model } from "#schemas/src/model";
+import type { Provider } from "#types/provider";
+import type { Model } from "#types/model";
 import { ConfigManager } from "./config/ConfigManager.js";
-import { logger } from "./Logger.js";
 import { Request, Response, NextFunction } from "express";
 import { PriceData } from "./PriceData.js";
 
@@ -17,7 +16,6 @@ export class Router {
    */
   public static initialize(): void {
     if (Router.instance) {
-      logger.warn("Router has already been initialized.");
       return;
     }
     Router.instance = new Router();
@@ -36,7 +34,6 @@ export class Router {
 
 
   private getProvidersForModel(modelname: string): { provider: Provider; model: Model }[] | undefined {
-    logger.debug(`Searching for providers for model: ${modelname}`);
     const providers: Provider[] = ConfigManager.getInstance().getProviders();
     const matches: { provider: Provider; model: Model }[] = [];
 
@@ -73,21 +70,18 @@ export class Router {
       // to be explicitly defined (not undefined) and all defined fields must be 0
       const hasInputCost = pricing.inputCostPerMillionTokens !== undefined;
       const hasOutputCost = pricing.outputCostPerMillionTokens !== undefined;
-      const hasRequestCost = pricing.costPerRequest !== undefined;
 
       // Must have at least one pricing field defined
-      if (!hasInputCost && !hasOutputCost && !hasRequestCost) {
+      if (!hasInputCost && !hasOutputCost) {
         return false;
       }
 
       // All defined pricing fields must be exactly 0
       const inputIsZero = !hasInputCost || pricing.inputCostPerMillionTokens === 0;
       const outputIsZero = !hasOutputCost || pricing.outputCostPerMillionTokens === 0;
-      const requestIsZero = !hasRequestCost || pricing.costPerRequest === 0;
 
-      return inputIsZero && outputIsZero && requestIsZero;
+      return inputIsZero && outputIsZero;
     } catch (error) {
-      logger.debug(`Error checking zero cost for ${provider.id}/${model.canonical_slug}: ${error}`);
       return false;
     }
   }
@@ -133,11 +127,9 @@ export class Router {
    * Filters candidates - now returns all candidates since rate limiting is removed.
    */
   private async filterAvailableCandidates(
-    candidates: { provider: Provider; model: Model }[],
-    modelname: string
+    candidates: { provider: Provider; model: Model }[]
   ): Promise<{ provider: Provider; model: Model }[]> {
     // Rate limiting has been removed, so all candidates are available
-    logger.debug(`Rate limiting disabled - all ${candidates.length} candidates are available for model '${modelname}'`);
     return candidates;
   }
 
@@ -169,16 +161,12 @@ export class Router {
     paidCandidates: { provider: Provider; model: Model }[]
   ): { provider: Provider; model: Model } | undefined {
     if (zeroCostCandidates.length > 0) {
-      logger.debug(
-        `Found ${zeroCostCandidates.length} zero-cost providers, selecting randomly`,
-      );
+
       return this.randomSelect(zeroCostCandidates);
     }
 
     if (paidCandidates.length > 0) {
-      logger.debug(
-        `No zero-cost providers found, selecting lowest cost provider from ${paidCandidates.length} available providers`,
-      );
+
       return this.selectBestPaidProvider(paidCandidates);
     }
 
@@ -199,26 +187,20 @@ export class Router {
   public async getBestProviderForModel(
     modelName: string,
   ): Promise<{ provider: Provider; model: Model } | { error: string; status: number }> {
-    logger.debug(`Finding a provider for model: ${modelName}`);
+
 
     const candidates = this.getProvidersForModel(modelName);
     if (!candidates || candidates.length === 0) {
-      logger.warn(`No configured provider found for model: ${modelName}`);
       return {
         error: `No configured provider found for model: ${modelName}`,
         status: 404,
       };
     }
-    logger.debug(
-      `Identified candidate providers: ${candidates.map((c) => c.provider.id).join(", ")}`,
-    );
 
-    const availableCandidates = await this.filterAvailableCandidates(
-      candidates,
-      modelName,
-    );
+
+    const availableCandidates = await this.filterAvailableCandidates(candidates);
     if (availableCandidates.length === 0) {
-      logger.error(`No available providers found for model '${modelName}'.`);
+
       return {
         error: `No available providers found for model '${modelName}'.`,
         status: 503,
@@ -229,16 +211,12 @@ export class Router {
     const selectedCandidate = this.selectBestCandidate(zeroCost, paid);
 
     if (!selectedCandidate) {
-      logger.error(
-        `Failed to select a provider from available candidates for model: ${modelName}`,
-      );
+
       return { error: "Failed to select a suitable provider.", status: 500 };
     }
 
     const { provider, model } = selectedCandidate;
-    logger.debug(
-      `Selected provider '${provider.id}' for model '${modelName}' (real name: '${model.canonical_slug}').`,
-    );
+
     return { provider, model };
   }
 
