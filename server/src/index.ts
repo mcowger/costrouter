@@ -2,13 +2,13 @@ import express from "express";
 import cors from "cors";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import path from 'path';
+import path from "path";
 import { ConfigManager } from "#server/components/config/ConfigManager";
 import { PriceData } from "#server/components/PriceData";
 import { Router } from "#server/components/Router";
 import { UnifiedExecutor } from "#server/components/UnifiedExecutor";
-import { getErrorMessage } from "#server/components/Utils";
-
+import configRouter from "#server/routes/config/configRoutes";
+import V1Router from "#server/routes/v1/v1";
 
 async function main() {
   // --- 1. Argument Parsing ---
@@ -27,20 +27,19 @@ async function main() {
     })
     .parse();
 
-
   // --- 2. Initialize Singletons in Order ---
-  await ConfigManager.initialize({ databasePath: argv.configDatabase as string });
+  await ConfigManager.initialize({
+    databasePath: argv.configDatabase as string,
+  });
 
   // Apply log level from config if available, otherwise use CLI argument
   try {
     const config = ConfigManager.getInstance().getConfig();
     const configLogLevel = config.logLevel;
     const finalLogLevel = configLogLevel || argv.loglevel;
-  } catch (error) {
-  }
+  } catch (error) {}
   PriceData.initialize();
   Router.initialize();
-
 
   // --- 3. Get Instances ---
   const router = Router.getInstance();
@@ -50,138 +49,58 @@ async function main() {
   // Initialize Express application
   const app = express();
   // Enable JSON body parsing for incoming requests with increased size limit
-  app.use(express.json({ limit: '5mb' }));
+  app.use(express.json({ limit: "5mb" }));
   app.use(cors());
-
-  // // Apply response body logging middleware
-  // app.use(responseBodyLogger);
-  // // Apply request and response logging middleware
-  // app.use(requestResponseLogger);
 
   // --- 4. Health Check Endpoint ---
   app.get("/health", (_req, res) => {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
-      version: "1.0.0"
+      version: "1.0.0",
     });
   });
 
-  // --- 5. Core API Route ---
-  app.post(
-    "/v1/chat/completions",
-    router.chooseProvider.bind(router),
-    executor.execute.bind(executor),
-  );
 
-  app.get("/v1/models", (_req, res) => {
-    try {
-      const providers = ConfigManager.getInstance().getProviders();
-      const allModels = new Set<string>();
+  // Add the routes for completions
+  app.use("/", V1Router);
 
-      for (const provider of providers) {
-        for (const model of provider.models) {
-          allModels.add(model.exposed_slug ?? model.canonical_slug);
-        }
-      }
-
-      const modelData = Array.from(allModels).map((modelId) => ({
-        id: modelId,
-        object: "model",
-        created: 1686935002, // Fixed timestamp as requested
-        owned_by: "ai",      // Fixed owner as requested
-      }));
-
-      res.json({
-        object: "list",
-        data: modelData,
-      });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      res.status(500).json({ error: "Failed to retrieve models." });
-    }
-  });
-
-  // --- 6. Config API Routes ---
-  app.get("/config/get", (_req, res) => {
-    try {
-      const config = ConfigManager.getInstance().getConfig();
-      res.json(config);
-    } catch (error) {
-      const message = getErrorMessage(error);
-      res.status(500).json({ error: "Failed to retrieve config." });
-    }
-  });
-
-  app.post("/config/set", async (req, res) => {
-    try {
-      const newConfig = req.body;
-      await ConfigManager.getInstance().updateConfig(newConfig);
-      res.json({ message: "Configuration updated successfully." });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      res.status(500).json({ error: "Failed to update configuration." });
-    }
-  });
-
-  app.post("/admin/reload", async (_req, res) => {
-    try {
-
-      // Reload the configuration from disk
-      await ConfigManager.getInstance().reloadConfig();
-
-      // Rate limiting has been disabled, so no limiter updates are needed
-
-      res.json({ message: "Configuration reloaded successfully." });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      res.status(500).json({ error: "Failed to reload configuration." });
-    }
-  });
-
-
-
-
-
-
-
-
+  // Add the routes for configs
+  app.use("/", configRouter);
 
   // --- Static UI Serving (after API routes) ---
 
   // Use process.cwd() to reliably get the project root directory.
   const projectRoot = process.cwd();
 
-  // The path to the compiled UI is now consistently in `dist/ui`.
-  const uiPath = path.join(projectRoot, 'dist', 'ui');
+  // // The path to the compiled UI is now consistently in `dist/ui`.
+  // const uiPath = path.join(projectRoot, "dist", "ui");
 
-  // Serve all static files from the correct build directory.
-  app.use(express.static(uiPath));
+  // // Serve all static files from the correct build directory.
+  // app.use(express.static(uiPath));
 
-  // For any non-API request, send the main index.html file to support the SPA.
-  app.get('*', (_req, res) => {
-    // Use a try-catch block for graceful error handling if the file is missing.
-    try {
-      res.sendFile(path.join(uiPath, 'index.html'));
-    } catch (err) {
-      res.status(404).send('UI not found. Please run the build process.');
-    }
-  });
-
+  // // For any non-API request, send the main index.html file to support the SPA.
+  // app.get("*", (_req, res) => {
+  //   // Use a try-catch block for graceful error handling if the file is missing.
+  //   try {
+  //     res.sendFile(path.join(uiPath, "index.html"));
+  //   } catch (err) {
+  //     res.status(404).send("UI not found. Please run the build process.");
+  //   }
+  // });
 
   const PORT = process.env.PORT || 3000;
-  const server = app.listen(PORT, () => {
-  });
+  const server = app.listen(PORT, () => {});
 
   // --- Graceful Shutdown ---
-  const gracefulShutdown = async (signal: string) => {
+  const gracefulShutdown = async (_signal: string) => {
     server.close(async () => {
       process.exit(0);
     });
   };
 
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 }
 
 // Run the main function and catch any top-level errors.

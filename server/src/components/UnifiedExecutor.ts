@@ -44,6 +44,9 @@ export class UnifiedExecutor {
     ["openrouter", (config: OpenRouterProviderSettings) => createOpenRouter({
       apiKey: config.apiKey,
     })],
+    ["deepinfra", (config: DeepInfraProviderSettings) => createDeepInfra({
+      apiKey: config.apiKey,
+    })],
   ]);
 
   private constructor() {

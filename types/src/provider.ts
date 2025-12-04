@@ -2,17 +2,6 @@
 import type { Model } from '#types/model';
 
 
-/**
- * Supported AI SDK v5 provider types
- */
-export type ProviderType = 
-  // Native AI SDK providers
-  | "openai"
-  // Third-party providers
-  | "openrouter"
-  | "ollama"
-  // OpenAI-compatible and custom providers
-  | "openai-compatible";
 
 
 
@@ -25,7 +14,7 @@ export type Provider = {
   id: string;
 
   /** The type of provider */
-  type: ProviderType;
+  type: string;
 
   // Common authentication fields
   apiKey: string;
