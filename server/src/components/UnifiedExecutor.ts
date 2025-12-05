@@ -1,10 +1,8 @@
 import { Provider } from '#types/provider';
 import { Model } from '#types/model';
-import { PriceData } from '#server/components/PriceData';
-import { APICallError } from 'ai';
 import { Request, Response } from 'express';
+import { ProviderRouter } from '#server/components/Router';
 import { GenerateTextResult, StreamTextResult, generateText, streamText } from 'ai';
-import { getErrorMessage } from './Utils.js';
 // Import OpenAI types for proper response formatting
 import type { ChatCompletion, ChatCompletionChunk } from 'openai/resources';
 // Import AI SDK providers
@@ -136,9 +134,11 @@ export class UnifiedExecutor {
 
     // Get or create the AI SDK provider instance
     const providerInstance = await this.getOrCreateProvider(chosenProvider);
+    const slug = ProviderRouter.getProviderModelSlug(chosenModel, chosenProvider.id)
+    
 
     // Create the model using the provider
-    const model = providerInstance(chosenModel.exposed_slug);
+    const model = providerInstance(slug);
 
     // Extract request data
     const { messages, stream = false, n = 1 } = req.body;

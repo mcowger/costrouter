@@ -73,4 +73,9 @@ export class ProviderRouter {
     return foundProvider
   }
 
+  public static getProviderModelSlug(model: Model, providerId: string): string | undefined {
+  const provider = model.providers.find(p => p.providerId === providerId);
+  return provider?.provider_model_slug;
+}
+
 }
