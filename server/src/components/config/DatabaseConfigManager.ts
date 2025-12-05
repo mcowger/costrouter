@@ -4,6 +4,7 @@ import { JSONFile } from 'lowdb/node';
 import type { AppConfig } from '#types/appConfig';
 import type { Provider } from '#types/provider';
 import { logger } from '#types/logger';
+import { ProviderRouter } from '#server/components/Router';
 
 /**
  * Manages application configuration using a LowDB JSON file.
@@ -38,7 +39,23 @@ export class JSONConfigManager {
     logger.info(`Loaded ${instance.config.providers.length} Providers`)
     logger.info(`Loaded ${instance.config.models.length} Models`)
     JSONConfigManager.instance = instance;
+    JSONConfigManager.validateModels()
     return instance;
+  }
+
+  private static validateModels() {
+    const config: AppConfig = JSONConfigManager.getInstance().getConfig()
+    for (const model of config.models) {
+      for (const provider of model.providers) {
+        const providerId = provider.providerId
+        try {
+          ProviderRouter.getProviderFromId(providerId)
+        } catch (error) {
+          logger.error(`Failed to validate provider ID: ${providerId} on model: \n${JSON.stringify(model, null, 4)}`)
+          process.exit(1);
+        }
+      }
+    }
   }
 
   public static getInstance(): JSONConfigManager {

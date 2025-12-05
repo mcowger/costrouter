@@ -3,8 +3,7 @@ import { Model } from '#types/model';
 import { Request, Response } from 'express';
 import { ProviderRouter } from '#server/components/Router';
 import { GenerateTextResult, StreamTextResult, generateText, streamText } from 'ai';
-// Import OpenAI types for proper response formatting
-import type { ChatCompletion, ChatCompletionChunk } from 'openai/resources';
+
 // Import AI SDK providers
 import { createOpenRouter, OpenRouterProviderSettings } from '@openrouter/ai-sdk-provider';
 import { createOpenAI, OpenAIProviderSettings } from '@ai-sdk/openai';
@@ -134,8 +133,7 @@ export class UnifiedExecutor {
 
     // Get or create the AI SDK provider instance
     const providerInstance = await this.getOrCreateProvider(chosenProvider);
-    const slug = ProviderRouter.getProviderModelSlug(chosenModel, chosenProvider.id)
-    
+    const slug = ProviderRouter.getProviderModelSlug(chosenModel, chosenProvider.id);
 
     // Create the model using the provider
     const model = providerInstance(slug);
@@ -292,19 +290,23 @@ export class UnifiedExecutor {
    */
   private handleNonStreamingResponse(
     res: Response,
-    provider: Provider,
+    _provider: Provider,
     model: Model,
     result: GenerateTextResult<any, any>,
   ): void {
     // Use the real model name for usage tracking
     // Use 0 as fallback if cost is undefined (pricing data not available)
 
-    // Format response to match OpenAI API format using official types
-    const openAIResponse: ChatCompletion = {
+    const openAIResponse = {
       id: `chatcmpl-${Date.now()}`,
       object: 'chat.completion',
       created: Math.floor(Date.now() / 1000),
       model: model.exposed_slug, // Use the mapped name that the client requested
+      usage: {
+        completion_tokens: result.usage.outputTokens,
+        prompt_tokens: result.usage.inputTokens,
+        total_tokens: result.usage.totalTokens,
+      },
       choices: [
         {
           index: 0,
@@ -312,8 +314,10 @@ export class UnifiedExecutor {
             role: 'assistant',
             content: result.text,
             refusal: null,
+            reasoning: result.reasoningText,
+            tool_calls: result.toolCalls
           },
-          finish_reason: result.finishReason as ChatCompletion.Choice['finish_reason'],
+          finish_reason: result.finishReason,
           logprobs: null,
         },
       ],
@@ -321,38 +325,6 @@ export class UnifiedExecutor {
 
     res.json(openAIResponse);
   }
-
-  /**
-   * Handles multiple choices responses for non-streaming requests when n > 1.
-   * Combines multiple GenerateTextResult objects into a single OpenAI-compatible response.
-   */
-  private handleMultipleChoicesResponse(
-    res: Response,
-    provider: Provider,
-    model: Model,
-    results: GenerateTextResult<any, any>[],
-  ): void {
-    // Format response to match OpenAI API format with multiple choices
-    const openAIResponse: ChatCompletion = {
-      id: `chatcmpl-${Date.now()}`,
-      object: 'chat.completion',
-      created: Math.floor(Date.now() / 1000),
-      model: model.exposed_slug,
-      choices: results.map((result, index) => ({
-        index,
-        message: {
-          role: 'assistant',
-          content: result.text,
-          refusal: null,
-        },
-        finish_reason: result.finishReason as ChatCompletion.Choice['finish_reason'],
-        logprobs: null,
-      })),
-    };
-
-    res.json(openAIResponse);
-  }
-
   /**
    * Clears the provider instance cache.
    * Useful for testing or when provider configurations change.

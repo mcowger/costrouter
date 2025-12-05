@@ -16,6 +16,7 @@ V1Router.post('/v1/chat/completions', async (req, res, _next) => {
     res.locals.chosenModel = ProviderRouter.getModelFromName(req.body.model);
   } catch (error) {
     res.status(500).json({ error: 'Failed to choose provider' });
+    return
   }
     const executor = UnifiedExecutor.getInstance();
     executor.execute(req, res);
