@@ -3,7 +3,7 @@ import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import type { AppConfig } from '#types/appConfig';
 import type { Provider } from '#types/provider';
-import logger from '#types/logger';
+import { logger } from '#types/logger';
 
 /**
  * Manages application configuration using a LowDB JSON file.

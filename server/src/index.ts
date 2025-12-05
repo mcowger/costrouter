@@ -1,58 +1,58 @@
-import express from "express";
-import cors from "cors";
-import yargs from "yargs/yargs";
-import { hideBin } from "yargs/helpers";
-import path from "path";
-import { JSONConfigManager } from "#server/components/config/DatabaseConfigManager";
-import { PriceData } from "#server/components/PriceData";
-import { ProviderRouter } from "#server/components/Router";
-import { UnifiedExecutor } from "#server/components/UnifiedExecutor";
-import configRouter from "#server/routes/config/configRoutes";
-import V1Router from "#server/routes/v1/v1";
-import logger  from '#types/logger'
-import { pino } from "pino";
+import express from 'express';
+import cors from 'cors';
+import yargs from 'yargs/yargs';
+import { hideBin } from 'yargs/helpers';
+import path from 'path';
+import { JSONConfigManager } from '#server/components/config/DatabaseConfigManager';
+import { PriceData } from '#server/components/PriceData';
+import { ProviderRouter } from '#server/components/Router';
+import { UnifiedExecutor } from '#server/components/UnifiedExecutor';
+import configRouter from '#server/routes/config/configRoutes';
+import V1Router from '#server/routes/v1/v1';
+import { httpLogger, logger, logIncoming } from '#types/logger';
+
+
 
 async function main() {
   // --- 1. Argument Parsing ---
   const argv = await yargs(hideBin(process.argv))
-    .option("config-database", {
-      alias: "cd",
-      type: "string",
-      description: "Path to the configuration LowDB JSON database file",
+    .option('config-database', {
+      alias: 'cd',
+      type: 'string',
+      description: 'Path to the configuration LowDB JSON database file',
       required: true,
     })
     .parse();
 
   // --- 2. Initialize Singletons in Order ---
-  await JSONConfigManager.initialize(
-    argv.configDatabase,
-  );
+  await JSONConfigManager.initialize(argv.configDatabase);
 
   PriceData.initialize();
   const providerRouter = ProviderRouter.initialize();
   const executor = UnifiedExecutor.initialize();
 
   const app = express();
-  //app.use(pino)
+  // First log the incoming request
+  app.use(logIncoming);
+  app.use(httpLogger);
   // Enable JSON body parsing for incoming requests with increased size limit
-  app.use(express.json({ limit: "5mb" }));
+  app.use(express.json({ limit: '5mb' }));
   app.use(cors());
 
   // --- 4. Health Check Endpoint ---
-  app.get("/health", (_req, res) => {
+  app.get('/health', (_req, res) => {
     res.json({
-      status: "ok",
+      status: 'ok',
       timestamp: new Date().toISOString(),
-      version: "1.0.0",
+      version: '1.0.0',
     });
   });
 
-
   // Add the routes for completions
-  app.use("/", V1Router);
+  app.use('/', V1Router);
 
   // Add the routes for configs
-  app.use("/", configRouter);
+  app.use('/', configRouter);
 
   // --- Static UI Serving (after API routes) ---
 
@@ -77,7 +77,7 @@ async function main() {
 
   const PORT = process.env.PORT || 3000;
   const server = app.listen(PORT, () => {});
-  logger.info(`Listening on 0.0.0.0:${PORT}`)
+  logger.info(`Listening on 0.0.0.0:${PORT}`);
   // --- Graceful Shutdown ---
   const gracefulShutdown = async (_signal: string) => {
     server.close(async () => {
@@ -85,12 +85,12 @@ async function main() {
     });
   };
 
-  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 // Run the main function and catch any top-level errors.
 main().catch((error) => {
-  console.error("Failed to start the application:", error);
+  console.error('Failed to start the application:', error);
   process.exit(1);
 });

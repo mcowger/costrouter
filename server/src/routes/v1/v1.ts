@@ -1,7 +1,7 @@
 import { Router as ExpressRouter } from 'express';
 import { JSONConfigManager } from '#server/components/config/DatabaseConfigManager';
 import { getErrorMessage } from '#server/components/Utils';
-import logger from '#types/logger.js';
+import { logger } from '#types/logger.js';
 import { ProviderRouter } from '#server/components/Router';
 import { UnifiedExecutor } from '#server/components/UnifiedExecutor';
 import type { Provider } from '#types/provider';

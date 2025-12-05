@@ -1,4 +1,5 @@
 import pino from 'pino';
+import { pinoHttp } from 'pino-http';
 
 // Define the log level based on the environment
 const logLevel = process.env.LOG_LEVEL || 'info';
@@ -6,7 +7,7 @@ const logLevel = process.env.LOG_LEVEL || 'info';
 // Check if we are in a development environment
 const isDev = process.env.NODE_ENV === 'development';
 
-const logger = pino({
+export const logger = pino({
   level: logLevel,
   // Only use pino-pretty in development for readable logs
   // In production, keep standard JSON for better performance and parsing
@@ -23,4 +24,19 @@ const logger = pino({
 });
 
 // Export the singleton instance directly
-export default logger;
+
+// Separate middleware to log the incoming request
+export const logIncoming = (req: any, res: any, next: any) => {
+  logger.info(req, 'Incoming request');
+  next();
+};
+
+export const httpLogger = pinoHttp({
+  logger,
+  customLogLevel: (req, res, err) => {
+    if (err) return 'error';
+    if (res.statusCode >= 500) return 'error';
+    if (res.statusCode >= 400) return 'warn';
+    return 'info';
+  },
+});
