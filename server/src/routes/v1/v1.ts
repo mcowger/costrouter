@@ -14,12 +14,11 @@ V1Router.post('/v1/chat/completions', async (req, res, _next) => {
   try {
     res.locals.chosenProvider = ProviderRouter.getInstance().chooseProvider(req, res);
     res.locals.chosenModel = ProviderRouter.getModelFromName(req.body.model);
-    const executor = UnifiedExecutor.getInstance();
-    executor.execute(req, res);
-    res.json({});
   } catch (error) {
     res.status(500).json({ error: 'Failed to choose provider' });
   }
+    const executor = UnifiedExecutor.getInstance();
+    executor.execute(req, res);
 });
 
 V1Router.get('/v1/models', (_req, res) => {
